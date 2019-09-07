@@ -4,7 +4,9 @@ Sep 7
 
 IEEE Fraud Detection Model
 
-- Baseline
+- Add back ids
+- Add V Features
+- Remove bad V features
 
 """
 import numpy as np  # linear algebra
@@ -132,9 +134,70 @@ logger.info('Done loading Data...')
 
 FEATURES = ['TransactionAmt', 'ProductCD',
             'card1', 'card2', 'card3',
-            'card4', 'card5', 'card6',]
+            'card4', 'card5', 'card6',
+            'id_12', 'id_13', 'id_14',
+            'id_15', 'id_16', 'id_17',
+            'id_18', 'id_19', 'id_20',
+            'id_21',
+            'id_22',
+            'id_23',
+            'id_24',
+            'id_25',
+            'id_26',
+            'id_27',
+            'id_28',
+            'id_29',
+            'id_30', 'id_31',
+            'id_32',
+            'id_33',
+            'id_34',
+            'id_35',
+            'id_36', 'id_37', 'id_38',
+            'DeviceType', 'DeviceInfo',
+            'M4','P_emaildomain',
+            'R_emaildomain',
+            'addr1', 'addr2',
+            'M1', 'M2', 'M3', 'M5', 'M6', 'M7', 'M8', 'M9',
+            'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8',
+            'C9', 'C10', 'C11', 'C12', 'C13', 'C14',
+            'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9',
+            'D10', 'D11', 'D12', 'D13', 'D14', 'D15',
+            'V5', 'V7', 'V12', 'V13', 'V19', 'V20', 'V24', 'V26',
+            'V30', 'V36', 'V38', 'V44', 'V45', 'V48', 'V53', 'V54',
+            'V55', 'V56', 'V58', 'V59', 'V61', 'V62', 'V66', 'V67',
+            'V69', 'V70', 'V74', 'V75', 'V76', 'V78', 'V82', 'V83',
+            'V86', 'V87', 'V90', 'V91', 'V96', 'V99', 'V102', 'V126',
+            'V127', 'V128', 'V129', 'V130', 'V131', 'V132', 'V133',
+            'V134', 'V136', 'V149', 'V151', 'V156', 'V165', 'V187',
+            'V189', 'V201', 'V221', 'V257', 'V258', 'V280', 'V281',
+            'V282', 'V283', 'V285', 'V289', 'V291', 'V294', 'V296',
+            'V298', 'V306', 'V307', 'V308', 'V309', 'V310', 'V311',
+            'V312', 'V313', 'V314', 'V315', 'V316', 'V317', 'V318', 'V320',
+            'dist1', 'dist2']
 
-CAT_FEATURES = ['ProductCD', 'card4', 'card6']
+CAT_FEATURES = ['ProductCD', 'card4', 'card6',
+            'id_12', 'id_13', 'id_14',
+            'id_15', 'id_16', 'id_17',
+            'id_18', 'id_19', 'id_20',
+            'id_21',
+            'id_22',
+            'id_23',
+            'id_24',
+            'id_25',
+            'id_26',
+            'id_27',
+            'id_28',
+            'id_29',
+            'id_30', 'id_31',
+            'id_32',
+            'id_33',
+            'id_34',
+            'id_35',
+            'id_36', 'id_37', 'id_38',
+            'DeviceType', 'DeviceInfo',
+            'M4','P_emaildomain',
+            'R_emaildomain', 'addr1', 'addr2',
+            'M1', 'M2', 'M3', 'M5', 'M6', 'M7', 'M8', 'M9']
 
 X = train_df[FEATURES]
 y = train_df[TARGET]

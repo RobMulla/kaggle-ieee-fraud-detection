@@ -4,8 +4,7 @@ Sep 7
 
 IEEE Fraud Detection Model
 
-- Baseline
-
+Baseline Catboost
 """
 import numpy as np  # linear algebra
 import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
@@ -18,8 +17,6 @@ import time
 import logging
 from sklearn.metrics import roc_auc_score
 from catboost import CatBoostClassifier, Pool
-from timeit import default_timer as timer
-start = timer()
 
 ##################
 # PARAMETERS
@@ -70,8 +67,6 @@ def get_logger():
 
 logger = get_logger()
 
-logger.info(f'Running for Model Number {MODEL_NUMBER}')
-
 ##################
 # PARAMETERS
 ###################
@@ -87,9 +82,9 @@ elif MODEL_TYPE == 'catboost':
 # TRACKING FUNCTION
 ###################
 
-def update_tracking(run_id,
-                    field,
-                    value, csv_file="../tracking/tracking.csv", integer=False, digits=None, drop_incomplete_rows=False):
+def update_tracking(
+    run_id, field, value, csv_file="../tracking/tracking.csv", integer=False, digits=None
+):
     """
     Function to update the tracking CSV with information about the model
     """
@@ -101,12 +96,10 @@ def update_tracking(run_id,
         value = round(value)
     elif digits is not None:
         value = round(value, digits)
-    if drop_incomplete_rows:
-        df = df.loc[~df['AUC'].isna()]
     df.loc[run_id, field] = value  # Model number is index
     df.to_csv(csv_file)
 
-update_tracking(run_id, "model_number", MODEL_NUMBER, drop_incomplete_rows=True)
+update_tracking(run_id, "model_number", MODEL_NUMBER)
 update_tracking(run_id, "n_estimators", N_ESTIMATORS)
 update_tracking(run_id, "early_stopping_rounds", EARLY_STOPPING_ROUNDS)
 update_tracking(run_id, "random_state", RANDOM_STATE)
@@ -132,9 +125,36 @@ logger.info('Done loading Data...')
 
 FEATURES = ['TransactionAmt', 'ProductCD',
             'card1', 'card2', 'card3',
-            'card4', 'card5', 'card6',]
+            'card4', 'card5', 'card6',
+            'id_12', 'id_13', 'id_14',
+            'id_15', 'id_16', 'id_17',
+            'id_18', 'id_19', 'id_20',
+            'id_21', 'id_22', 'id_23',
+            'id_24', 'id_25', 'id_26',
+            'id_27', 'id_28', 'id_29',
+            'id_30', 'id_31', 'id_32',
+            'id_33', 'id_34', 'id_35',
+            'id_36', 'id_37', 'id_38',
+            'DeviceType', 'DeviceInfo',
+            'M4','P_emaildomain',
+            'R_emaildomain',
+            'addr1', 'addr2',
+            'M1', 'M2', 'M3', 'M5', 'M6', 'M7', 'M8', 'M9']
 
-CAT_FEATURES = ['ProductCD', 'card4', 'card6']
+CAT_FEATURES = ['ProductCD', 'card4', 'card6',
+                'id_12', 'id_13', 'id_14',
+            'id_15', 'id_16', 'id_17',
+            'id_18', 'id_19', 'id_20',
+            'id_21', 'id_22', 'id_23',
+            'id_24', 'id_25', 'id_26',
+            'id_27', 'id_28', 'id_29',
+            'id_30', 'id_31', 'id_32',
+            'id_33', 'id_34', 'id_35',
+            'id_36', 'id_37', 'id_38',
+            'DeviceType', 'DeviceInfo',
+            'M4','P_emaildomain',
+            'R_emaildomain', 'addr1', 'addr2',
+            'M1', 'M2', 'M3', 'M5', 'M6', 'M7', 'M8', 'M9']
 
 X = train_df[FEATURES]
 y = train_df[TARGET]
@@ -158,9 +178,7 @@ oof = np.zeros(len(X))
 pred = np.zeros(len(X_test))
 oof_df = train_df[['isFraud']].copy()
 oof_df['oof'] = np.nan
-oof_df['fold'] = np.nan
 scores = []
-best_iterations = []
 
 for fold_n, (train_idx, valid_idx) in enumerate(folds.split(X, y)):
     X_train = X.iloc[train_idx]
@@ -188,8 +206,8 @@ for fold_n, (train_idx, valid_idx) in enumerate(folds.split(X, y)):
                 eval_set=valid_dataset,
                 early_stopping_rounds=EARLY_STOPPING_ROUNDS,
             )
-        y_pred_valid = model.predict_proba(valid_dataset)[:,1]
-        y_pred = model.predict_proba(test_dataset)[:,1]
+        y_pred_valid = model.predict(valid_dataset)
+        y_pred = model.predict(test_dataset)
 
         fold_importance = pd.DataFrame()
         fold_importance["feature"] = model.feature_names_
@@ -197,45 +215,29 @@ for fold_n, (train_idx, valid_idx) in enumerate(folds.split(X, y)):
         fold_importance["fold"] = fold_n + 1
         feature_importance = pd.concat([feature_importance, fold_importance],
                                        axis=0)
-        best_iteration = model.best_iteration_
-    best_iterations.append(best_iteration)
+        fold_score = roc_auc_score(y_valid, y_pred_valid)
+        scores.append(fold_score)
 
-    fold_score = roc_auc_score(y_valid, y_pred_valid)
-    scores.append(fold_score)
-
-    update_tracking(run_id, "AUC_f{}".format(fold_n + 1),
-                    fold_score,
-                    integer=False,)
-    logger.info('Fold {} of {} CV mean AUC score: {:.4f}. Best iteration {}'.format(fold_n + 1,
-                                                                  N_FOLDS,
-                                                                  fold_score,
-                                                                  best_iteration))
-    oof_df.iloc[valid_idx, oof_df.columns.get_loc('oof')] = y_pred_valid.reshape(-1)
-    oof_df.iloc[valid_idx, oof_df.columns.get_loc('fold')] = fold_n + 1
-    pred += y_pred
-
-update_tracking(run_id, 'avg_best_iteration',
-                np.mean(best_iterations),
-                integer=True)
-
-###############
-# Store Results
-###############
+        update_tracking(run_id, "AUC_f{}".format(fold_n + 1),
+                        fold_score,
+                        integer=False,)
+        logger.info('Fold {} of {} CV mean AUC score: {:.4f}.'.format(fold_n + 1,
+                                                                      N_FOLDS,
+                                                                      fold_score,))
+        oof_df.iloc[valid_idx, oof_df.columns.get_loc('oof')] = y_pred_valid.reshape(-1)
+        pred += y_pred
 pred /= N_FOLDS
 score = np.mean(scores)
 sub = pd.read_csv('../input/sample_submission.csv')
 sub['isFraud'] = pred
-sub.to_csv(f'../sub/sub_{MODEL_NUMBER}_{run_id}_{score:.4f}.csv', index=False)
-oof_df.to_csv(f'../oof/oof_{MODEL_NUMBER}_{run_id}_{score:.4f}.csv')
+sub.to_csv(f'../oof/sub_{run_id}_{MODEL_NUMBER}_{score:.4f}.csv')
+oof_df.to_csv(f'../oof/sub_{run_id}_{MODEL_NUMBER}_{score:.4f}.csv')
 logger.info('CV mean AUC score: {:.4f}, std: {:.4f}.'.format(np.mean(scores),
                                                              np.std(scores)))
-total_score = roc_auc_score(oof_df['isFraud'], oof_df['oof'])
-feature_importance.to_csv(f'../fi/fi_{MODEL_NUMBER}_{run_id}_{score:.4f}.csv')
+total_score = roc_auc_score(oof_df['oof'], oof_df['isFraud'])
 
 update_tracking(run_id, "AUC",
                 total_score,
                 integer=False,)
 logger.info('OOF AUC Score: {:.4f}'.format(total_score))
-end = timer()
-update_tracking(run_id, "training_time", (end - start), integer=True)
 logger.info('Done!')
