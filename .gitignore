@@ -107,3 +107,4 @@ venv.bak/
 *.parquet
 *catboost_info*
 *.zip
+*.pkl
