@@ -108,3 +108,4 @@ venv.bak/
 *catboost_info*
 *.zip
 *.pkl
+*.tmp
