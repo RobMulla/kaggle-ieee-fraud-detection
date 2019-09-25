@@ -1,11 +1,13 @@
 """
 Created by: Rob Mulla
-Sep 22
+Sep 24
 
 IEEE Fraud Detection Model
 
-- FE012
+- FE013
 - Yang's Features
+- Raddars Features
+
 """
 import numpy as np  # linear algebra
 import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
@@ -48,7 +50,7 @@ N_THREADS = 58
 DEPTH = -1 #14
 N_FOLDS = 5
 SHUFFLE = False
-FE_SET = 'FE012' # Feature Engineering Version
+FE_SET = 'FE013' # Feature Engineering Version
 
 MODEL_TYPE = "lightgbm"
 
@@ -553,9 +555,10 @@ def train_lightgbm(X_train, y_train, X_valid, y_valid, X_test, CAT_FEATURES, fol
     X_train = X_train.copy()
     X_valid = X_valid.copy()
     X_test = X_test.copy()
-    X_train[CAT_FEATURES] = X_train[CAT_FEATURES].astype('category')
-    X_valid[CAT_FEATURES] = X_valid[CAT_FEATURES].astype('category')
-    X_test[CAT_FEATURES] = X_test[CAT_FEATURES].astype('category')
+    if len(CAT_FEATURES) > 0:
+        X_train[CAT_FEATURES] = X_train[CAT_FEATURES].astype('category')
+        X_valid[CAT_FEATURES] = X_valid[CAT_FEATURES].astype('category')
+        X_test[CAT_FEATURES] = X_test[CAT_FEATURES].astype('category')
 
     model = lgb.LGBMClassifier(**lgb_params)
 
