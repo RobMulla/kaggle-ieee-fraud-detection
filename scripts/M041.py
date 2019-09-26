@@ -4,11 +4,11 @@ Sep 24
 
 IEEE Fraud Detection Model
 
-- FE014
+- FE013
 - Yang's Features
 - Raddars Features
-- Raddar features using train/val split first and then training on best iteration on
-all data
+- Remove AV bad features
+
 """
 import numpy as np  # linear algebra
 import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
@@ -48,10 +48,10 @@ VERBOSE = 100
 EARLY_STOPPING_ROUNDS = 100
 RANDOM_STATE = 529
 N_THREADS = 58
-DEPTH = 14 #-1 #14
+DEPTH = -1 #14
 N_FOLDS = 5
 SHUFFLE = False
-FE_SET = 'FE014' # Feature Engineering Version
+FE_SET = 'FE013' # Feature Engineering Version
 
 MODEL_TYPE = "lightgbm"
 
@@ -133,9 +133,8 @@ update_tracking(run_id, "fe", FE_SET)
 folds = KFold(n_splits=N_FOLDS, random_state=RANDOM_STATE, shuffle=SHUFFLE)
 
 logger.info('Loading Data...')
-train_val = pd.read_parquet(f'../data/{FE_SET}_train_val.parquet')
-train_test = pd.read_parquet(f'../data/{FE_SET}_train_test.parquet')
-#test_df = pd.read_parquet(f'../data/test_{FE_SET}.parquet')
+train_df = pd.read_parquet(f'../data/train_{FE_SET}.parquet')
+test_df = pd.read_parquet(f'../data/test_{FE_SET}.parquet')
 logger.info('Done loading Data...')
 
 ###########
@@ -428,45 +427,51 @@ FEATURES = [ 'V85', 'bank_type_TransactionAmt_mean', 'D5_fq_enc', 'V12',
     'countC6_inc', 'countC7_inc', 'countC8_inc', 'countC9_inc',
     'countC10_inc', 'countC11_inc', 'countC12_inc', 'countC13_inc',
     'countC14_inc', 'ndistM1', 'ndistM2', 'ndistM3', 'ndistM4', 'ndistM5',
-    'ndistM6', 'ndistM7', 'ndistM8', 'ndistM9','mFraud','sFraud','cFraud']
+    'ndistM6', 'ndistM7', 'ndistM8', 'ndistM9']
 
-CAT_FEATURES = ['ProductCD', 'card4', 'card6',
-            'id_12', 'id_13', 'id_14',
-            'id_15', 'id_16', 'id_17',
-            'id_18', 'id_19', 'id_20',
-            'id_21',
-            'id_22',
-            'id_23',
-            'id_24',
-            'id_25',
-            'id_26',
-            'id_27',
-            'id_28',
-            'id_29',
-            'id_32',
-            'id_34',
-            'id_35',
-            'id_36', 'id_37', 'id_38',
-            'DeviceType', 'DeviceInfo',
-            'M4','P_emaildomain',
-            'R_emaildomain', 'addr1', 'addr2',
-            'M1', 'M2', 'M3', 'M5', 'M6', 'M7', 'M8', 'M9',
-            'ProductCD_W_95cents','ProductCD_W_00cents','ProductCD_W_50cents',
-            'ProductCD_W_50_95_0_cents','ProductCD_W_NOT_50_95_0_cents',
-               ]
+BAD_AV_FEATURES = ['D10_DT_D_std_score', 'D10_DT_M_min_max', 'D10_DT_M_std_score',
+    'D10_DT_W_min_max', 'D10_intercept', 'D11_DT_M_std_score',
+    'D11_DT_W_std_score', 'D11_intercept', 'D13_DT_M_std_score',
+    'D14_DT_M_std_score', 'D15_DT_D_std_score', 'D15_DT_M_min_max',
+    'D15_DT_M_std_score', 'D15_DT_W_min_max', 'D15_intercept', 'D15_to_std_addr1',
+    'D1_intercept', 'D2_intercept', 'D3_DT_D_min_max', 'D3_DT_M_min_max',
+    'D3_DT_M_std_score', 'D3_DT_W_std_score', 'D3_intercept', 'D4_DT_M_std_score',
+    'D4_DT_W_min_max', 'D4_DT_W_std_score', 'D5_DT_D_std_score',
+    'D5_DT_W_std_score', 'D5_intercept', 'D6_DT_M_std_score', 'D6_intercept',
+    'D8_DT_D_std_score', 'D8_DT_M_std_score', 'D8_DT_W_std_score',
+    'Mean_TransAmt_Day', 'Sum_TransAmt_Day', 'TranAmt_div_Mean_D10_DOY_productCD',
+    'Trans_Count_Day', 'TransactionAmt_DT_D_min_max',
+    'TransactionAmt_DT_M_min_max', 'TransactionAmt_DT_M_std_score',
+    'TransactionAmt_to_mean_card4', 'TransactionAmt_to_std_card4', 'V81', 'V85',
+    'V91', 'addr2_div_Mean_D10_DOY', 'addr2_div_Mean_D1_DOY', 'bank_type_DT_D',
+    'bank_type_DT_M_month_day_dist_best', 'card3_DT_W_week_day_dist',
+    'card3_div_Mean_D10_DOY', 'card3_div_Mean_D10_DOY_productCD',
+    'card3_div_Mean_D1_DOY', 'card3_div_Mean_D1_DOY_productCD',
+    'card4_div_Mean_D1_DOY', 'card4_div_Mean_D1_DOY_productCD',
+    'card5_DT_M_month_day_dist_best', 'card5_DT_W_week_day_dist',
+    'card5_div_Mean_D1_DOY', 'card6_div_Mean_D10_DOY', 'card6_div_Mean_D1_DOY',
+    'card6_div_Mean_D1_DOY_productCD', 'id_01_count_dist', 'id_33_count_dist',
+    'minDT', 'product_type_DT_D', 'product_type_DT_M', 'product_type_DT_W',
+    'uid_DT_D', 'uid_DT_M', 'uid_DT_W']
+
+FEATURES = [f for f in FEATURES if f not in BAD_AV_FEATURES]
+
+CAT_FEATURES = ['ProductCD', 'card4', 'card6', 'id_12', 'id_13', 'id_14', 'id_15', 'id_16',
+    'id_17', 'id_18', 'id_19', 'id_20', 'id_21', 'id_22', 'id_23', 'id_24',
+    'id_25', 'id_26', 'id_27', 'id_28', 'id_29', 'id_32', 'id_34', 'id_35',
+    'id_36', 'id_37', 'id_38', 'DeviceType', 'DeviceInfo', 'M4','P_emaildomain',
+    'R_emaildomain', 'addr1', 'addr2', 'M1', 'M2', 'M3', 'M5', 'M6', 'M7', 'M8',
+    'M9', 'ProductCD_W_95cents','ProductCD_W_00cents','ProductCD_W_50cents',
+    'ProductCD_W_50_95_0_cents','ProductCD_W_NOT_50_95_0_cents']
 
 CAT_FEATURES = [c for c in CAT_FEATURES if c in FEATURES]
 
-X = train_val[FEATURES].copy()
-y = train_val[TARGET].copy()
-X_test = train_test.loc[train_test['isFraud'].isna()][FEATURES].copy()
+X = train_df[FEATURES].copy()
+y = train_df[TARGET].copy()
+X_test = test_df[FEATURES].copy()
 
 X = X.fillna(-9999)
 X_test = X_test.fillna(-9999)
-
-# Remove duplicate columns
-X = X.loc[:,~X.columns.duplicated()]
-X_test = X_test.loc[:,~X_test.columns.duplicated()]
 
 
 logger.info('Running with features...')
@@ -475,6 +480,7 @@ logger.info(f'Target is {TARGET}')
 
 
 update_tracking(run_id, "n_features", len(FEATURES), integer=True)
+
 
 ############################
 #### TRAIN MODELS FUNCTIONS
@@ -559,31 +565,22 @@ lgb_params = {
 
 def train_lightgbm(X_train, y_train, X_valid, y_valid, X_test, CAT_FEATURES, fold_n, feature_importance):
     X_train = X_train.copy()
-    if X_valid is not None:
-        X_valid = X_valid.copy()
+    X_valid = X_valid.copy()
     X_test = X_test.copy()
     if len(CAT_FEATURES) > 0:
         X_train[CAT_FEATURES] = X_train[CAT_FEATURES].astype('category')
-        if X_valid is not None:
-            X_valid[CAT_FEATURES] = X_valid[CAT_FEATURES].astype('category')
+        X_valid[CAT_FEATURES] = X_valid[CAT_FEATURES].astype('category')
         X_test[CAT_FEATURES] = X_test[CAT_FEATURES].astype('category')
 
     model = lgb.LGBMClassifier(**lgb_params)
 
-    if X_valid is not None:
-        eval_set = [(X_train, y_train), (X_valid, y_valid)]
-    else:
-        eval_set = [(X_train, y_train)]
-
     model.fit(X_train, y_train,
-            eval_set = eval_set,
+            eval_set = [(X_train, y_train),
+                        (X_valid, y_valid)],
             verbose = VERBOSE,
             early_stopping_rounds=EARLY_STOPPING_ROUNDS)
 
-    if X_valid is None:
-        y_pred_valid = None
-    else:  
-        y_pred_valid = model.predict_proba(X_valid)[:,1]
+    y_pred_valid = model.predict_proba(X_valid)[:,1]
     y_pred = model.predict_proba(X_test)[:,1]
 
     fold_importance = pd.DataFrame()
@@ -602,21 +599,20 @@ def train_lightgbm(X_train, y_train, X_valid, y_valid, X_test, CAT_FEATURES, fol
 feature_importance = pd.DataFrame()
 oof = np.zeros(len(X))
 pred = np.zeros(len(X_test))
-oof_df = train_val[['isFraud']].copy()
+oof_df = train_df[['isFraud']].copy()
 oof_df['oof'] = np.nan
 oof_df['fold'] = np.nan
 scores = []
 best_iterations = []
 
-# del train_df, test_df
-# gc.collect()
+del train_df, test_df
+gc.collect()
 
-for fold_n in [0]:
-    logger.info('Running Split on TransactionDT <= 1300000')
-    X_train = X.loc[train_val['TransactionDT'] <= 1300000]
-    y_train = y.loc[train_val['TransactionDT'] <= 1300000]
-    X_valid = X.loc[train_val['TransactionDT'] > 1300000]
-    y_valid = y.loc[train_val['TransactionDT'] > 1300000]
+for fold_n, (train_idx, valid_idx) in enumerate(folds.split(X, y)):
+    X_train = X.iloc[train_idx]
+    y_train = y.iloc[train_idx]
+    X_valid = X.iloc[valid_idx]
+    y_valid = y.iloc[valid_idx]
 
     if MODEL_TYPE == "catboost":
         y_pred, y_pred_valid, feature_importance, best_iteration = train_catboost(X_train, y_train, X_valid, y_valid, X_test, CAT_FEATURES, fold_n, feature_importance)
@@ -634,37 +630,13 @@ for fold_n in [0]:
                                                                   N_FOLDS,
                                                                   fold_score,
                                                                   best_iteration))
-    oof_df.loc[train_val['TransactionDT'] > 1300000, oof_df.columns.get_loc('oof')] = y_pred_valid.reshape(-1)
-    oof_df.loc[train_val['TransactionDT'] > 1300000, oof_df.columns.get_loc('fold')] = fold_n + 1
+    oof_df.iloc[valid_idx, oof_df.columns.get_loc('oof')] = y_pred_valid.reshape(-1)
+    oof_df.iloc[valid_idx, oof_df.columns.get_loc('fold')] = fold_n + 1
     pred += y_pred
 
 update_tracking(run_id, 'avg_best_iteration',
                 np.mean(best_iterations),
                 integer=True)
-
-logger.info('Now training on everything using best iteration * 105%')
-best_iteration = np.mean(best_iterations)
-iteration_to_train_all = int(best_iteration * 1.05)
-logger.info(f'Iteration to train all {iteration_to_train_all}')
-
-X = train_test.loc[~train_test['isFraud'].isna()][FEATURES].copy()
-y = train_test.loc[~train_test['isFraud'].isna()][TARGET].copy()
-X_test = train_test.loc[train_test['isFraud'].isna()][FEATURES].copy()
-
-X = X.fillna(-9999)
-X_test = X_test.fillna(-9999)
-
-# Remove duplicate columns
-X = X.loc[:,~X.columns.duplicated()]
-X_test = X_test.loc[:,~X_test.columns.duplicated()]
-
-for fold_n in [1]:
-    if MODEL_TYPE == "catboost":
-        y_pred, y_pred_valid, feature_importance, best_iteration = train_catboost(X, y, None, None, X_test, CAT_FEATURES, fold_n, feature_importance)
-    if MODEL_TYPE == 'lightgbm':
-        lgb_params['n_estimators'] = iteration_to_train_all
-        logger.info(f'Using params: {lgb_params}')
-        y_pred, y_pred_valid, feature_importance, best_iteration = train_lightgbm(X, y, None, None, X_test, CAT_FEATURES, fold_n, feature_importance)
 
 ###############
 # Store Results
@@ -677,14 +649,13 @@ sub.to_csv(f'../sub/sub_{MODEL_NUMBER}_{run_id}_{score:.4f}.csv', index=False)
 oof_df.to_csv(f'../oof/oof_{MODEL_NUMBER}_{run_id}_{score:.4f}.csv')
 logger.info('CV mean AUC score: {:.4f}, std: {:.4f}.'.format(np.mean(scores),
                                                              np.std(scores)))
-oof_df = oof_df.dropna()
-# total_score = roc_auc_score(oof_df['isFraud'], oof_df['oof'])
+total_score = roc_auc_score(oof_df['isFraud'], oof_df['oof'])
 feature_importance.to_csv(f'../fi/fi_{MODEL_NUMBER}_{run_id}_{score:.4f}.csv')
 
-# update_tracking(run_id, "AUC",
-#                 total_score,
-#                 integer=False,)
-logger.info('OOF AUC Score: {:.4f}'.format(score))
+update_tracking(run_id, "AUC",
+                total_score,
+                integer=False,)
+logger.info('OOF AUC Score: {:.4f}'.format(total_score))
 end = timer()
 update_tracking(run_id, "training_time", (end - start), integer=True)
 logger.info('Done!')
