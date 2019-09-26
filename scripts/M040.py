@@ -43,7 +43,7 @@ if KERNEL_RUN:
 TARGET = "isFraud"
 N_ESTIMATORS = 100000
 N_META_ESTIMATORS = 500000
-LEARNING_RATE = 0.05
+LEARNING_RATE = 0.005
 VERBOSE = 100
 EARLY_STOPPING_ROUNDS = 100
 RANDOM_STATE = 529
@@ -134,6 +134,7 @@ folds = KFold(n_splits=N_FOLDS, random_state=RANDOM_STATE, shuffle=SHUFFLE)
 
 logger.info('Loading Data...')
 train_val = pd.read_parquet(f'../data/{FE_SET}_train_val.parquet')
+train_test = pd.read_parquet(f'../data/{FE_SET}_train_test.parquet')
 #test_df = pd.read_parquet(f'../data/test_{FE_SET}.parquet')
 logger.info('Done loading Data...')
 
@@ -427,7 +428,7 @@ FEATURES = [ 'V85', 'bank_type_TransactionAmt_mean', 'D5_fq_enc', 'V12',
     'countC6_inc', 'countC7_inc', 'countC8_inc', 'countC9_inc',
     'countC10_inc', 'countC11_inc', 'countC12_inc', 'countC13_inc',
     'countC14_inc', 'ndistM1', 'ndistM2', 'ndistM3', 'ndistM4', 'ndistM5',
-    'ndistM6', 'ndistM7', 'ndistM8', 'ndistM9']
+    'ndistM6', 'ndistM7', 'ndistM8', 'ndistM9','mFraud','sFraud','cFraud']
 
 CAT_FEATURES = ['ProductCD', 'card4', 'card6',
             'id_12', 'id_13', 'id_14',
@@ -452,13 +453,13 @@ CAT_FEATURES = ['ProductCD', 'card4', 'card6',
             'M1', 'M2', 'M3', 'M5', 'M6', 'M7', 'M8', 'M9',
             'ProductCD_W_95cents','ProductCD_W_00cents','ProductCD_W_50cents',
             'ProductCD_W_50_95_0_cents','ProductCD_W_NOT_50_95_0_cents',
-               'mFraud','sFraud','cFraud']
+               ]
 
 CAT_FEATURES = [c for c in CAT_FEATURES if c in FEATURES]
 
 X = train_val[FEATURES].copy()
 y = train_val[TARGET].copy()
-X_test = test_df[FEATURES].copy()
+X_test = train_test.loc[train_test['isFraud'].isna()][FEATURES].copy()
 
 X = X.fillna(-9999)
 X_test = X_test.fillna(-9999)
@@ -569,18 +570,20 @@ def train_lightgbm(X_train, y_train, X_valid, y_valid, X_test, CAT_FEATURES, fol
 
     model = lgb.LGBMClassifier(**lgb_params)
 
-    if X_train is not None:
+    if X_valid is not None:
         eval_set = [(X_train, y_train), (X_valid, y_valid)]
     else:
         eval_set = [(X_train, y_train)]
 
     model.fit(X_train, y_train,
-            eval_set = [(X_train, y_train),
-                        (X_valid, y_valid)],
+            eval_set = eval_set,
             verbose = VERBOSE,
             early_stopping_rounds=EARLY_STOPPING_ROUNDS)
 
-    y_pred_valid = model.predict_proba(X_valid)[:,1]
+    if X_valid is None:
+        y_pred_valid = None
+    else:  
+        y_pred_valid = model.predict_proba(X_valid)[:,1]
     y_pred = model.predict_proba(X_test)[:,1]
 
     fold_importance = pd.DataFrame()
@@ -599,21 +602,21 @@ def train_lightgbm(X_train, y_train, X_valid, y_valid, X_test, CAT_FEATURES, fol
 feature_importance = pd.DataFrame()
 oof = np.zeros(len(X))
 pred = np.zeros(len(X_test))
-oof_df = train_df[['isFraud']].copy()
+oof_df = train_val[['isFraud']].copy()
 oof_df['oof'] = np.nan
 oof_df['fold'] = np.nan
 scores = []
 best_iterations = []
 
-del train_df, test_df
-gc.collect()
+# del train_df, test_df
+# gc.collect()
 
 for fold_n in [0]:
-    print('Running Split on TransactionDT <= 1300000')
-    X_train = X.iloc[train_val['TransactionDT'] <= 1300000]
-    y_train = y.iloc[train_val['TransactionDT'] <= 1300000]
-    X_valid = X.iloc[train_val['TransactionDT'] > 1300000]
-    y_valid = y.iloc[train_val['TransactionDT'] > 1300000]
+    logger.info('Running Split on TransactionDT <= 1300000')
+    X_train = X.loc[train_val['TransactionDT'] <= 1300000]
+    y_train = y.loc[train_val['TransactionDT'] <= 1300000]
+    X_valid = X.loc[train_val['TransactionDT'] > 1300000]
+    y_valid = y.loc[train_val['TransactionDT'] > 1300000]
 
     if MODEL_TYPE == "catboost":
         y_pred, y_pred_valid, feature_importance, best_iteration = train_catboost(X_train, y_train, X_valid, y_valid, X_test, CAT_FEATURES, fold_n, feature_importance)
@@ -631,22 +634,22 @@ for fold_n in [0]:
                                                                   N_FOLDS,
                                                                   fold_score,
                                                                   best_iteration))
-    oof_df.iloc[valid_idx, oof_df.columns.get_loc('oof')] = y_pred_valid.reshape(-1)
-    oof_df.iloc[valid_idx, oof_df.columns.get_loc('fold')] = fold_n + 1
+    oof_df.loc[train_val['TransactionDT'] > 1300000, oof_df.columns.get_loc('oof')] = y_pred_valid.reshape(-1)
+    oof_df.loc[train_val['TransactionDT'] > 1300000, oof_df.columns.get_loc('fold')] = fold_n + 1
     pred += y_pred
 
 update_tracking(run_id, 'avg_best_iteration',
                 np.mean(best_iterations),
                 integer=True)
 
-print('Now training on everything using best iteration * 105%')
+logger.info('Now training on everything using best iteration * 105%')
 best_iteration = np.mean(best_iterations)
-iteration_to_train_all = best_iteration * 1.05
+iteration_to_train_all = int(best_iteration * 1.05)
+logger.info(f'Iteration to train all {iteration_to_train_all}')
 
-train_test = pd.read_parquet(f'../data/{FE_SET}_train_test.parquet')
-X = train_test[FEATURES].copy()
-y = train_test[TARGET].copy()
-X_test = test_df[FEATURES].copy()
+X = train_test.loc[~train_test['isFraud'].isna()][FEATURES].copy()
+y = train_test.loc[~train_test['isFraud'].isna()][TARGET].copy()
+X_test = train_test.loc[train_test['isFraud'].isna()][FEATURES].copy()
 
 X = X.fillna(-9999)
 X_test = X_test.fillna(-9999)
@@ -660,6 +663,7 @@ for fold_n in [1]:
         y_pred, y_pred_valid, feature_importance, best_iteration = train_catboost(X, y, None, None, X_test, CAT_FEATURES, fold_n, feature_importance)
     if MODEL_TYPE == 'lightgbm':
         lgb_params['n_estimators'] = iteration_to_train_all
+        logger.info(f'Using params: {lgb_params}')
         y_pred, y_pred_valid, feature_importance, best_iteration = train_lightgbm(X, y, None, None, X_test, CAT_FEATURES, fold_n, feature_importance)
 
 ###############
