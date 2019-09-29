@@ -452,7 +452,7 @@ CAT_FEATURES = [c for c in CAT_FEATURES if c in FEATURES]
 ## ADD IN LB PROBE
 probe_df = pd.read_csv(f'../data/{LB_PROBE}.csv')
 
-probe_df = probe_df.merge(test_df.drop('isFraud', axis=1), on='TransactionID', sort=True, how='left')
+probe_df = probe_df.merge(test_df.drop('isFraud', axis=1), on='TransactionID', how='left')
 logger.info(probe_df.head())
 logger.info(probe_df.dtypes)
 
