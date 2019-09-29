@@ -43,7 +43,7 @@ if KERNEL_RUN:
 
 
 TARGET = "isFraud"
-N_ESTIMATORS = 3000
+N_ESTIMATORS = 2500
 LEARNING_RATE = 0.005
 VERBOSE = 100
 EARLY_STOPPING_ROUNDS = 100
@@ -452,10 +452,14 @@ CAT_FEATURES = [c for c in CAT_FEATURES if c in FEATURES]
 ## ADD IN LB PROBE
 probe_df = pd.read_csv(f'../data/{LB_PROBE}.csv')
 
-probe_df = probe_df.merge(test_df, how='left')
+probe_df = probe_df.merge(test_df.drop('isFraud', axis=1), on='TransactionID', sort=True, how='left')
+logger.info(probe_df.head())
+logger.info(probe_df.dtypes)
 
+logger.info(train_df[['isFraud']].head())
 logger.info('train_df before adding probe has shape {}'.format(train_df.shape))
-train_df = pd.concat([train_df, probe_df], axis=0)
+train_df = pd.concat([train_df, probe_df], sort=True, axis=0)
+logger.info(train_df[['isFraud']].head())
 logger.info('train_df after adding probe has shape {}'.format(train_df.shape))
 
 X = train_df[FEATURES].copy()
